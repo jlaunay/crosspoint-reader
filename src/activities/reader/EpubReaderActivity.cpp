@@ -324,6 +324,47 @@ void EpubReaderActivity::renderScreen() {
   Serial.printf("[%lu] [ERS] Page loaded: %d elements, %d footnotes\n",
                 millis(), p->elementCount, p->footnoteCount);
 
+  // Check footnote before copy
+  bool hasCorruptedFootnotes = false;
+  for (int i = 0; i < p->footnoteCount && i < 16; i++) {
+    FootnoteEntry* fn = p->getFootnote(i);
+    if (fn) {
+      // Vérifier que number et href sont null-terminés
+      bool numberValid = false;
+      bool hrefValid = false;
+
+      // Chercher le null terminator dans number (3 bytes)
+      for (int j = 0; j < 3; j++) {
+        if (fn->number[j] == '\0') {
+          numberValid = true;
+          break;
+        }
+      }
+
+      // Chercher le null terminator dans href (64 bytes)
+      for (int j = 0; j < 64; j++) {
+        if (fn->href[j] == '\0') {
+          hrefValid = true;
+          break;
+        }
+      }
+
+      if (!numberValid || !hrefValid) {
+        Serial.printf("[%lu] [ERS] CORRUPTION DETECTED in footnote %d: number=%d, href=%d\n",
+                      millis(), i, numberValid, hrefValid);
+        hasCorruptedFootnotes = true;
+        break;
+      }
+    }
+  }
+
+  if (hasCorruptedFootnotes) {
+    Serial.printf("[%lu] [ERS] Page has corrupted footnotes - clearing cache\n", millis());
+    section->clearCache();
+    section.reset();
+    return renderScreen();
+  }
+
   // Copy footnotes from page to currentPageFootnotes
   currentPageFootnotes.clear();
   int maxFootnotes = (p->footnoteCount < 16) ? p->footnoteCount : 16;
