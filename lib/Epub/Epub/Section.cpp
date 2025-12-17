@@ -20,7 +20,7 @@ static bool writeEscapedXml(File& file, const char* text) {
   static char buffer[2048];
   int bufferPos = 0;
 
-  while (*text && bufferPos < sizeof(buffer) - 10) { // Leave margin for entities
+  while (*text && bufferPos < sizeof(buffer) - 10) {  // Leave margin for entities
     unsigned char c = (unsigned char)*text;
 
     // Only escape the 5 XML special characters
@@ -178,10 +178,10 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
 
     const auto sdPath = "/sd" + localPath;
 
-    ChapterHtmlSlimParser visitor(sdPath.c_str(), renderer, fontId, lineCompression, marginTop, marginRight,
-                                  marginBottom, marginLeft, extraParagraphSpacing,
-                                  [this](std::unique_ptr<Page> page) { this->onPageComplete(std::move(page)); },
-                                  cachePath);
+    ChapterHtmlSlimParser visitor(
+        sdPath.c_str(), renderer, fontId, lineCompression, marginTop, marginRight, marginBottom, marginLeft,
+        extraParagraphSpacing, [this](std::unique_ptr<Page> page) { this->onPageComplete(std::move(page)); },
+        cachePath);
 
     bool success = visitor.parseAndBuildPages();
 
@@ -190,7 +190,8 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
       return false;
     }
 
-    writeCacheMetadata(fontId, lineCompression, marginTop, marginRight, marginBottom, marginLeft, extraParagraphSpacing);
+    writeCacheMetadata(fontId, lineCompression, marginTop, marginRight, marginBottom, marginLeft,
+                       extraParagraphSpacing);
     return true;
   }
 
@@ -209,10 +210,9 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
 
   const auto sdTmpHtmlPath = "/sd" + tmpHtmlPath;
 
-  ChapterHtmlSlimParser visitor(sdTmpHtmlPath.c_str(), renderer, fontId, lineCompression, marginTop, marginRight,
-                                marginBottom, marginLeft, extraParagraphSpacing,
-                                [this](std::unique_ptr<Page> page) { this->onPageComplete(std::move(page)); },
-                                cachePath);
+  ChapterHtmlSlimParser visitor(
+      sdTmpHtmlPath.c_str(), renderer, fontId, lineCompression, marginTop, marginRight, marginBottom, marginLeft,
+      extraParagraphSpacing, [this](std::unique_ptr<Page> page) { this->onPageComplete(std::move(page)); }, cachePath);
 
   // Track which inline footnotes AND paragraph notes are actually referenced in this file
   std::set<std::string> rewrittenInlineIds;
@@ -232,10 +232,9 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
       if (underscorePos != std::string::npos && dotPos != std::string::npos) {
         std::string noteId = href.substr(underscorePos + 1, dotPos - underscorePos - 1);
         rewrittenInlineIds.insert(noteId);
-        Serial.printf("[%lu] [SCT] Marked note as rewritten: %s\n",
-                      millis(), noteId.c_str());
+        Serial.printf("[%lu] [SCT] Marked note as rewritten: %s\n", millis(), noteId.c_str());
       }
-    }else {
+    } else {
       // Normal external footnote
       epub->markAsFootnotePage(noteref.href);
     }
@@ -254,8 +253,8 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
   }
 
   // NOW generate inline footnote HTML files ONLY for rewritten ones
-  Serial.printf("[%lu] [SCT] Found %d inline footnotes, %d were referenced\n",
-                millis(), visitor.inlineFootnoteCount, rewrittenInlineIds.size());
+  Serial.printf("[%lu] [SCT] Found %d inline footnotes, %d were referenced\n", millis(), visitor.inlineFootnoteCount,
+                rewrittenInlineIds.size());
 
   for (int i = 0; i < visitor.inlineFootnoteCount; i++) {
     const char* inlineId = visitor.inlineFootnotes[i].id;
@@ -263,8 +262,7 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
 
     // Only generate if this inline footnote was actually referenced
     if (rewrittenInlineIds.find(std::string(inlineId)) == rewrittenInlineIds.end()) {
-      Serial.printf("[%lu] [SCT] Skipping unreferenced inline footnote: %s\n",
-                    millis(), inlineId);
+      Serial.printf("[%lu] [SCT] Skipping unreferenced inline footnote: %s\n", millis(), inlineId);
       continue;
     }
 
@@ -274,8 +272,7 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
       continue;
     }
 
-    Serial.printf("[%lu] [SCT] Processing inline footnote: %s (len=%d)\n",
-                  millis(), inlineId, strlen(inlineText));
+    Serial.printf("[%lu] [SCT] Processing inline footnote: %s (len=%d)\n", millis(), inlineId, strlen(inlineText));
 
     char inlineFilename[64];
     snprintf(inlineFilename, sizeof(inlineFilename), "inline_%s.html", inlineId);
@@ -325,64 +322,64 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
     }
   }
 
-// Generate paragraph note HTML files
-Serial.printf("[%lu] [SCT] Found %d paragraph notes\n", millis(), visitor.paragraphNoteCount);
+  // Generate paragraph note HTML files
+  Serial.printf("[%lu] [SCT] Found %d paragraph notes\n", millis(), visitor.paragraphNoteCount);
 
-for (int i = 0; i < visitor.paragraphNoteCount; i++) {
-  const char* pnoteId = visitor.paragraphNotes[i].id;
-  const char* pnoteText = visitor.paragraphNotes[i].text;
+  for (int i = 0; i < visitor.paragraphNoteCount; i++) {
+    const char* pnoteId = visitor.paragraphNotes[i].id;
+    const char* pnoteText = visitor.paragraphNotes[i].text;
 
-  if (!pnoteText || strlen(pnoteText) == 0) {
-    continue;
-  }
-
-  // Check if this paragraph note was referenced
-  if (rewrittenInlineIds.find(std::string(pnoteId)) == rewrittenInlineIds.end()) {
-    Serial.printf("[%lu] [SCT] Skipping unreferenced paragraph note: %s\n", millis(), pnoteId);
-    continue;
-  }
-
-  // Create filename: pnote_rnote1.html
-  char pnoteFilename[64];
-  snprintf(pnoteFilename, sizeof(pnoteFilename), "pnote_%s.html", pnoteId);
-
-  std::string fullPath = epub->getCachePath() + "/" + std::string(pnoteFilename);
-
-  Serial.printf("[%lu] [SCT] Generating paragraph note file: %s\n", millis(), fullPath.c_str());
-
-  File file = SD.open(fullPath.c_str(), FILE_WRITE, true);
-  if (file) {
-    file.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-    file.println("<!DOCTYPE html>");
-    file.println("<html xmlns=\"http://www.w3.org/1999/xhtml\">");
-    file.println("<head>");
-    file.println("<meta charset=\"UTF-8\"/>");
-    file.println("<title>Note</title>");
-    file.println("</head>");
-    file.println("<body>");
-    file.print("<p id=\"");
-    file.print(pnoteId);
-    file.print("\">");
-
-    if (!writeEscapedXml(file, pnoteText)) {
-      Serial.printf("[%lu] [SCT] Warning: writeEscapedXml may have failed\n", millis());
+    if (!pnoteText || strlen(pnoteText) == 0) {
+      continue;
     }
 
-    file.println("</p>");
-    file.println("</body>");
-    file.println("</html>");
-    file.close();
+    // Check if this paragraph note was referenced
+    if (rewrittenInlineIds.find(std::string(pnoteId)) == rewrittenInlineIds.end()) {
+      Serial.printf("[%lu] [SCT] Skipping unreferenced paragraph note: %s\n", millis(), pnoteId);
+      continue;
+    }
 
-    Serial.printf("[%lu] [SCT] Generated paragraph note file\n", millis());
+    // Create filename: pnote_rnote1.html
+    char pnoteFilename[64];
+    snprintf(pnoteFilename, sizeof(pnoteFilename), "pnote_%s.html", pnoteId);
 
-    int virtualIndex = epub->addVirtualSpineItem(fullPath);
-    Serial.printf("[%lu] [SCT] Added virtual spine item at index %d\n", millis(), virtualIndex);
+    std::string fullPath = epub->getCachePath() + "/" + std::string(pnoteFilename);
 
-    char newHref[128];
-    snprintf(newHref, sizeof(newHref), "%s#%s", pnoteFilename, pnoteId);
-    epub->markAsFootnotePage(newHref);
+    Serial.printf("[%lu] [SCT] Generating paragraph note file: %s\n", millis(), fullPath.c_str());
+
+    File file = SD.open(fullPath.c_str(), FILE_WRITE, true);
+    if (file) {
+      file.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+      file.println("<!DOCTYPE html>");
+      file.println("<html xmlns=\"http://www.w3.org/1999/xhtml\">");
+      file.println("<head>");
+      file.println("<meta charset=\"UTF-8\"/>");
+      file.println("<title>Note</title>");
+      file.println("</head>");
+      file.println("<body>");
+      file.print("<p id=\"");
+      file.print(pnoteId);
+      file.print("\">");
+
+      if (!writeEscapedXml(file, pnoteText)) {
+        Serial.printf("[%lu] [SCT] Warning: writeEscapedXml may have failed\n", millis());
+      }
+
+      file.println("</p>");
+      file.println("</body>");
+      file.println("</html>");
+      file.close();
+
+      Serial.printf("[%lu] [SCT] Generated paragraph note file\n", millis());
+
+      int virtualIndex = epub->addVirtualSpineItem(fullPath);
+      Serial.printf("[%lu] [SCT] Added virtual spine item at index %d\n", millis(), virtualIndex);
+
+      char newHref[128];
+      snprintf(newHref, sizeof(newHref), "%s#%s", pnoteFilename, pnoteId);
+      epub->markAsFootnotePage(newHref);
+    }
   }
-}
 
   Serial.printf("[%lu] [SCT] Total noterefs found: %d\n", millis(), noterefCount);
 

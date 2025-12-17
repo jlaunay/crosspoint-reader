@@ -1,6 +1,8 @@
 #include "EpubReaderFootnotesScreen.h"
-#include "config.h"
+
 #include <GfxRenderer.h>
+
+#include "config.h"
 
 void EpubReaderFootnotesScreen::onEnter() {
   selectedIndex = 0;
@@ -20,8 +22,7 @@ void EpubReaderFootnotesScreen::handleInput() {
   if (inputManager.wasPressed(InputManager::BTN_CONFIRM)) {
     const FootnoteEntry* entry = footnotes.getEntry(selectedIndex);
     if (entry) {
-      Serial.printf("[%lu] [FNS] Selected footnote: %s -> %s\n",
-                    millis(), entry->number, entry->href);
+      Serial.printf("[%lu] [FNS] Selected footnote: %s -> %s\n", millis(), entry->number, entry->href);
 
       // Appeler le callback - EpubReaderScreen gère la navigation
       onSelectFootnote(entry->href);
@@ -83,9 +84,8 @@ void EpubReaderFootnotesScreen::render() {
   }
 
   // Instructions at bottom
-  renderer.drawText(SMALL_FONT_ID, marginLeft,
-                   GfxRenderer::getScreenHeight() - 40,
-                   "UP/DOWN: Select  CONFIRM: Go to footnote  BACK: Return");
+  renderer.drawText(SMALL_FONT_ID, marginLeft, GfxRenderer::getScreenHeight() - 40,
+                    "UP/DOWN: Select  CONFIRM: Go to footnote  BACK: Return");
 
   renderer.displayBuffer();
 }

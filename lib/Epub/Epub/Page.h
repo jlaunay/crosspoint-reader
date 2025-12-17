@@ -1,8 +1,8 @@
 #pragma once
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <utility>
-#include <cstdlib>
 
 #include "FootnoteEntry.h"
 #include "blocks/TextBlock.h"
@@ -24,7 +24,7 @@ class PageElement {
 class PageLine final : public PageElement {
   std::shared_ptr<TextBlock> block;
 
-public:
+ public:
   PageLine(std::shared_ptr<TextBlock> block, const int16_t xPos, const int16_t yPos)
       : PageElement(xPos, yPos), block(std::move(block)) {}
   void render(GfxRenderer& renderer, int fontId) override;
@@ -33,14 +33,14 @@ public:
 };
 
 class Page {
-private:
+ private:
   std::shared_ptr<PageElement>* elements;
   int elementCapacity;
 
   FootnoteEntry* footnotes;
   int footnoteCapacity;
 
-public:
+ public:
   int elementCount;
   int footnoteCount;
 

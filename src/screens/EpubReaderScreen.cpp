@@ -1,6 +1,5 @@
 #include "EpubReaderScreen.h"
 
-#include "EpubReaderFootnotesScreen.h"
 #include <Epub/Page.h>
 #include <GfxRenderer.h>
 #include <SD.h>
@@ -8,6 +7,7 @@
 #include "Battery.h"
 #include "CrossPointSettings.h"
 #include "EpubReaderChapterSelectionScreen.h"
+#include "EpubReaderFootnotesScreen.h"
 #include "EpubReaderMenuScreen.h"
 #include "config.h"
 
@@ -46,11 +46,8 @@ void EpubReaderScreen::onEnter() {
   updateRequired = true;
 
   xTaskCreate(&EpubReaderScreen::taskTrampoline, "EpubReaderScreenTask",
-              24576, //32768
-              this,
-              1,
-              &displayTaskHandle
-  );
+              24576,  // 32768
+              this, 1, &displayTaskHandle);
 }
 
 void EpubReaderScreen::onExit() {
@@ -126,8 +123,7 @@ void EpubReaderScreen::handleInput() {
             subScreen->onExit();
 
             subScreen.reset(new EpubReaderFootnotesScreen(
-                this->renderer,
-                this->inputManager,
+                this->renderer, this->inputManager,
                 currentPageFootnotes,  // Pass collected footnotes (reference)
                 [this] {
                   // onGoBack from footnotes
@@ -460,8 +456,7 @@ void EpubReaderScreen::navigateToHref(const char* href, bool savePosition) {
     savedSpineIndex = currentSpineIndex;
     savedPageNumber = section->currentPage;
     isViewingFootnote = true;
-    Serial.printf("[%lu] [ERS] Saved position: spine %d, page %d\n",
-                  millis(), savedSpineIndex, savedPageNumber);
+    Serial.printf("[%lu] [ERS] Saved position: spine %d, page %d\n", millis(), savedSpineIndex, savedPageNumber);
   }
 
   // Parse href: "filename.html#anchor"
@@ -483,8 +478,7 @@ void EpubReaderScreen::navigateToHref(const char* href, bool savePosition) {
     filename = filename.substr(lastSlash + 1);
   }
 
-  Serial.printf("[%lu] [ERS] Navigate to: %s (anchor: %s)\n",
-                millis(), filename.c_str(), anchor.c_str());
+  Serial.printf("[%lu] [ERS] Navigate to: %s (anchor: %s)\n", millis(), filename.c_str(), anchor.c_str());
 
   int targetSpineIndex = -1;
 
@@ -492,23 +486,20 @@ void EpubReaderScreen::navigateToHref(const char* href, bool savePosition) {
   if (!anchor.empty()) {
     // Try inline footnote first
     std::string inlineFilename = "inline_" + anchor + ".html";
-    Serial.printf("[%lu] [ERS] Looking for inline footnote: %s\n",
-                  millis(), inlineFilename.c_str());
+    Serial.printf("[%lu] [ERS] Looking for inline footnote: %s\n", millis(), inlineFilename.c_str());
 
     targetSpineIndex = epub->findVirtualSpineIndex(inlineFilename);
 
     // If not found, try paragraph note
     if (targetSpineIndex == -1) {
       std::string pnoteFilename = "pnote_" + anchor + ".html";
-      Serial.printf("[%lu] [ERS] Looking for paragraph note: %s\n",
-                    millis(), pnoteFilename.c_str());
+      Serial.printf("[%lu] [ERS] Looking for paragraph note: %s\n", millis(), pnoteFilename.c_str());
 
       targetSpineIndex = epub->findVirtualSpineIndex(pnoteFilename);
     }
 
     if (targetSpineIndex != -1) {
-      Serial.printf("[%lu] [ERS] Found note at virtual index: %d\n",
-                    millis(), targetSpineIndex);
+      Serial.printf("[%lu] [ERS] Found note at virtual index: %d\n", millis(), targetSpineIndex);
 
       // Navigate to the note
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
@@ -520,8 +511,7 @@ void EpubReaderScreen::navigateToHref(const char* href, bool savePosition) {
       updateRequired = true;
       return;
     } else {
-      Serial.printf("[%lu] [ERS] No virtual note found, trying normal navigation\n",
-                    millis());
+      Serial.printf("[%lu] [ERS] No virtual note found, trying normal navigation\n", millis());
     }
   }
 
@@ -531,9 +521,7 @@ void EpubReaderScreen::navigateToHref(const char* href, bool savePosition) {
 
     std::string spineItem = epub->getSpineItem(i);
     size_t lastSlash = spineItem.find_last_of('/');
-    std::string spineFilename = (lastSlash != std::string::npos)
-                                ? spineItem.substr(lastSlash + 1)
-                                : spineItem;
+    std::string spineFilename = (lastSlash != std::string::npos) ? spineItem.substr(lastSlash + 1) : spineItem;
 
     if (spineFilename == filename) {
       targetSpineIndex = i;
@@ -542,8 +530,7 @@ void EpubReaderScreen::navigateToHref(const char* href, bool savePosition) {
   }
 
   if (targetSpineIndex == -1) {
-    Serial.printf("[%lu] [ERS] Could not find spine index for: %s\n",
-                  millis(), filename.c_str());
+    Serial.printf("[%lu] [ERS] Could not find spine index for: %s\n", millis(), filename.c_str());
     return;
   }
 
@@ -556,15 +543,13 @@ void EpubReaderScreen::navigateToHref(const char* href, bool savePosition) {
 
   updateRequired = true;
 
-  Serial.printf("[%lu] [ERS] Navigated to spine index: %d\n",
-                millis(), targetSpineIndex);
+  Serial.printf("[%lu] [ERS] Navigated to spine index: %d\n", millis(), targetSpineIndex);
 }
 
 // Method to restore saved position
 void EpubReaderScreen::restoreSavedPosition() {
   if (savedSpineIndex >= 0 && savedPageNumber >= 0) {
-    Serial.printf("[%lu] [ERS] Restoring position: spine %d, page %d\n",
-                  millis(), savedSpineIndex, savedPageNumber);
+    Serial.printf("[%lu] [ERS] Restoring position: spine %d, page %d\n", millis(), savedSpineIndex, savedPageNumber);
 
     xSemaphoreTake(renderingMutex, portMAX_DELAY);
     currentSpineIndex = savedSpineIndex;

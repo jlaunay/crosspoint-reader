@@ -12,13 +12,10 @@
 #include "Screen.h"
 
 class EpubReaderMenuScreen final : public Screen {
-public:
-  enum MenuOption {
-    CHAPTERS,
-    FOOTNOTES
-  };
+ public:
+  enum MenuOption { CHAPTERS, FOOTNOTES };
 
-private:
+ private:
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
   int selectorIndex = 0;
@@ -30,13 +27,11 @@ private:
   [[noreturn]] void displayTaskLoop();
   void renderScreen();
 
-public:
+ public:
   explicit EpubReaderMenuScreen(GfxRenderer& renderer, InputManager& inputManager,
                                 const std::function<void()>& onGoBack,
                                 const std::function<void(MenuOption option)>& onSelectOption)
-      : Screen(renderer, inputManager),
-        onGoBack(onGoBack),
-        onSelectOption(onSelectOption) {}
+      : Screen(renderer, inputManager), onGoBack(onGoBack), onSelectOption(onSelectOption) {}
 
   void onEnter() override;
   void onExit() override;

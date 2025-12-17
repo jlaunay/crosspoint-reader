@@ -1,16 +1,17 @@
 #pragma once
-#include "Screen.h"
-#include "../../lib/Epub/Epub/FootnoteEntry.h"
+#include <cstring>
 #include <functional>
 #include <memory>
-#include <cstring>
+
+#include "../../lib/Epub/Epub/FootnoteEntry.h"
+#include "Screen.h"
 
 class FootnotesData {
-private:
+ private:
   FootnoteEntry entries[32];
   int count;
 
-public:
+ public:
   FootnotesData() : count(0) {}
 
   void addFootnote(const char* number, const char* href) {
@@ -23,13 +24,9 @@ public:
     }
   }
 
-  void clear() {
-    count = 0;
-  }
+  void clear() { count = 0; }
 
-  int getCount() const {
-    return count;
-  }
+  int getCount() const { return count; }
 
   const FootnoteEntry* getEntry(int index) const {
     if (index >= 0 && index < count) {
@@ -45,13 +42,10 @@ class EpubReaderFootnotesScreen final : public Screen {
   const std::function<void(const char*)> onSelectFootnote;
   int selectedIndex;
 
-public:
-  EpubReaderFootnotesScreen(
-      GfxRenderer& renderer,
-      InputManager& inputManager,
-      const FootnotesData& footnotes,
-      const std::function<void()>& onGoBack,
-      const std::function<void(const char*)>& onSelectFootnote)
+ public:
+  EpubReaderFootnotesScreen(GfxRenderer& renderer, InputManager& inputManager, const FootnotesData& footnotes,
+                            const std::function<void()>& onGoBack,
+                            const std::function<void(const char*)>& onSelectFootnote)
       : Screen(renderer, inputManager),
         footnotes(footnotes),
         onGoBack(onGoBack),
@@ -62,6 +56,6 @@ public:
   void onExit() override;
   void handleInput() override;
 
-private:
+ private:
   void render();
 };

@@ -337,9 +337,7 @@ void Epub::markAsFootnotePage(const std::string& href) {
 
   // Extract filename from href (remove #anchor if present)
   size_t hashPos = href.find('#');
-  std::string filename = (hashPos != std::string::npos)
-                        ? href.substr(0, hashPos)
-                        : href;
+  std::string filename = (hashPos != std::string::npos) ? href.substr(0, hashPos) : href;
 
   // Extract just the filename without path
   size_t lastSlash = filename.find_last_of('/');
@@ -356,7 +354,6 @@ bool Epub::isFootnotePage(const std::string& filename) const {
   return footnotePages->find(filename) != footnotePages->end();
 }
 
-
 bool Epub::shouldHideFromToc(int spineIndex) const {
   // Always hide virtual spine items
   if (isVirtualSpineItem(spineIndex)) {
@@ -371,9 +368,7 @@ bool Epub::shouldHideFromToc(int spineIndex) const {
 
   // Extract filename from spine item
   size_t lastSlash = spineItem.find_last_of('/');
-  std::string filename = (lastSlash != std::string::npos)
-                        ? spineItem.substr(lastSlash + 1)
-                        : spineItem;
+  std::string filename = (lastSlash != std::string::npos) ? spineItem.substr(lastSlash + 1) : spineItem;
 
   return isFootnotePage(filename);
 }
@@ -387,14 +382,11 @@ int Epub::addVirtualSpineItem(const std::string& path) {
 
   virtualSpineItems->push_back(path);
   int newIndex = spine.size() + virtualSpineItems->size() - 1;
-  Serial.printf("[%lu] [EPUB] Added virtual spine item: %s (index %d)\n",
-                millis(), path.c_str(), newIndex);
+  Serial.printf("[%lu] [EPUB] Added virtual spine item: %s (index %d)\n", millis(), path.c_str(), newIndex);
   return newIndex;
 }
 
-bool Epub::isVirtualSpineItem(int spineIndex) const {
-  return spineIndex >= static_cast<int>(spine.size());
-}
+bool Epub::isVirtualSpineItem(int spineIndex) const { return spineIndex >= static_cast<int>(spine.size()); }
 
 int Epub::findVirtualSpineIndex(const std::string& filename) const {
   if (!virtualSpineItems) return -1;
@@ -402,9 +394,7 @@ int Epub::findVirtualSpineIndex(const std::string& filename) const {
   for (size_t i = 0; i < virtualSpineItems->size(); i++) {
     std::string virtualPath = (*virtualSpineItems)[i];
     size_t lastSlash = virtualPath.find_last_of('/');
-    std::string virtualFilename = (lastSlash != std::string::npos)
-                                  ? virtualPath.substr(lastSlash + 1)
-                                  : virtualPath;
+    std::string virtualFilename = (lastSlash != std::string::npos) ? virtualPath.substr(lastSlash + 1) : virtualPath;
 
     if (virtualFilename == filename) {
       return spine.size() + i;

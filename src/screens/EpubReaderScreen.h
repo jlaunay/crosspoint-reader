@@ -4,8 +4,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
-#include "EpubReaderFootnotesScreen.h"
 
+#include "EpubReaderFootnotesScreen.h"
 #include "Screen.h"
 
 class EpubReaderScreen final : public Screen {
@@ -35,7 +35,7 @@ class EpubReaderScreen final : public Screen {
   void navigateToHref(const char* href, bool savePosition = false);
   void restoreSavedPosition();
 
-public:
+ public:
   explicit EpubReaderScreen(GfxRenderer& renderer, InputManager& inputManager, std::unique_ptr<Epub> epub,
                             const std::function<void()>& onGoBack)
       : Screen(renderer, inputManager), epub(std::move(epub)), onGoBack(onGoBack) {}

@@ -1,12 +1,11 @@
 #include "Page.h"
+
 #include <HardwareSerial.h>
 #include <Serialization.h>
 
 constexpr uint8_t PAGE_FILE_VERSION = 6;  // Incremented
 
-void PageLine::render(GfxRenderer& renderer, const int fontId) {
-  block->render(renderer, fontId, xPos, yPos);
-}
+void PageLine::render(GfxRenderer& renderer, const int fontId) { block->render(renderer, fontId, xPos, yPos); }
 
 void PageLine::serialize(std::ostream& os) {
   serialization::writePod(os, xPos);

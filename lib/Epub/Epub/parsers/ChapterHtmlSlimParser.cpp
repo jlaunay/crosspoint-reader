@@ -90,7 +90,7 @@ void ChapterHtmlSlimParser::addFootnoteToCurrentPage(const char* number, const c
       }
     }
 
-    //Check if we have this as a paragraph note
+    // Check if we have this as a paragraph note
     if (!foundInline) {
       for (int i = 0; i < paragraphNoteCount; i++) {
         if (strcmp(paragraphNotes[i].id, inlineId) == 0) {
@@ -120,10 +120,9 @@ void ChapterHtmlSlimParser::addFootnoteToCurrentPage(const char* number, const c
 
   currentPageFootnoteCount++;
 
-  Serial.printf("[%lu] [ADDFT] Stored as: num=%s, href=%s\n",
-                millis(),
-                currentPageFootnotes[currentPageFootnoteCount-1].number,
-                currentPageFootnotes[currentPageFootnoteCount-1].href);
+  Serial.printf("[%lu] [ADDFT] Stored as: num=%s, href=%s\n", millis(),
+                currentPageFootnotes[currentPageFootnoteCount - 1].number,
+                currentPageFootnotes[currentPageFootnoteCount - 1].href);
 }
 
 void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char* name, const XML_Char** atts) {
@@ -173,8 +172,8 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     if (epubType && strcmp(epubType, "footnote") == 0 && id) {
       if (self->isPass1CollectingAsides) {
         // Pass 1: Collect aside
-        Serial.printf("[%lu] [ASIDE] Found inline footnote: id=%s (pass1=%d)\n",
-                      millis(), id, self->isPass1CollectingAsides);
+        Serial.printf("[%lu] [ASIDE] Found inline footnote: id=%s (pass1=%d)\n", millis(), id,
+                      self->isPass1CollectingAsides);
 
         self->insideAsideFootnote = true;
         self->asideDepth = self->depth;
@@ -189,8 +188,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
 
         // Find the inline footnote text
         for (int i = 0; i < self->inlineFootnoteCount; i++) {
-          if (strcmp(self->inlineFootnotes[i].id, id) == 0 &&
-              self->inlineFootnotes[i].text) {
+          if (strcmp(self->inlineFootnotes[i].id, id) == 0 && self->inlineFootnotes[i].text) {
             // Output the footnote text as normal text
             const char* text = self->inlineFootnotes[i].text;
             int textLen = strlen(text);
@@ -198,10 +196,9 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
             // Process it through characterData
             self->characterData(self, text, textLen);
 
-            Serial.printf("[%lu] [ASIDE] Rendered aside text: %.80s...\n",
-                          millis(), text);
+            Serial.printf("[%lu] [ASIDE] Rendered aside text: %.80s...\n", millis(), text);
             break;
-              }
+          }
         }
 
         // Skip the aside element itself
@@ -332,13 +329,13 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
 void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char* s, const int len) {
   auto* self = static_cast<ChapterHtmlSlimParser*>(userData);
 
-  //Collect paragraph note text in Pass 1
+  // Collect paragraph note text in Pass 1
   if (self->insideParagraphNote && self->isPass1CollectingAsides) {
     for (int i = 0; i < len; i++) {
       if (self->currentParagraphNoteTextLen >= self->MAX_PNOTE_BUFFER - 2) {
         if (self->currentParagraphNoteTextLen == self->MAX_PNOTE_BUFFER - 2) {
-          Serial.printf("[%lu] [PNOTE] WARNING: Note text truncated at %d chars\n",
-                        millis(), self->MAX_PNOTE_BUFFER - 2);
+          Serial.printf("[%lu] [PNOTE] WARNING: Note text truncated at %d chars\n", millis(),
+                        self->MAX_PNOTE_BUFFER - 2);
         }
         break;
       }
@@ -349,7 +346,7 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
         if (self->currentParagraphNoteTextLen > 0 &&
             self->currentParagraphNoteText[self->currentParagraphNoteTextLen - 1] != ' ') {
           self->currentParagraphNoteText[self->currentParagraphNoteTextLen++] = ' ';
-            }
+        }
       } else if (c >= 32 || c >= 0x80) {  // Accept printable ASCII AND UTF-8
         self->currentParagraphNoteText[self->currentParagraphNoteTextLen++] = c;
       }
@@ -367,8 +364,8 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
     for (int i = 0; i < len; i++) {
       if (self->currentAsideTextLen >= self->MAX_ASIDE_BUFFER - 2) {
         if (self->currentAsideTextLen == self->MAX_ASIDE_BUFFER - 2) {
-          Serial.printf("[%lu] [ASIDE] WARNING: Footnote text truncated at %d chars (id=%s)\n",
-                        millis(), self->MAX_ASIDE_BUFFER - 2, self->currentAsideId);
+          Serial.printf("[%lu] [ASIDE] WARNING: Footnote text truncated at %d chars (id=%s)\n", millis(),
+                        self->MAX_ASIDE_BUFFER - 2, self->currentAsideId);
         }
         break;
       }
@@ -376,10 +373,9 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
       unsigned char c = (unsigned char)s[i];  // Cast to unsigned char
 
       if (isWhitespace(c)) {
-        if (self->currentAsideTextLen > 0 &&
-            self->currentAsideText[self->currentAsideTextLen - 1] != ' ') {
+        if (self->currentAsideTextLen > 0 && self->currentAsideText[self->currentAsideTextLen - 1] != ' ') {
           self->currentAsideText[self->currentAsideTextLen++] = ' ';
-            }
+        }
       } else if (c >= 32 || c >= 0x80) {  // Accept printable ASCII AND UTF-8 bytes
         self->currentAsideText[self->currentAsideTextLen++] = c;
       }
@@ -443,36 +439,27 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
 void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* name) {
   auto* self = static_cast<ChapterHtmlSlimParser*>(userData);
 
-  //Closing paragraph note in Pass 1
-  if (strcmp(name, "p") == 0 && self->insideParagraphNote &&
-      self->depth - 1 == self->paragraphNoteDepth) {
-
-    if (self->isPass1CollectingAsides &&
-        self->currentParagraphNoteTextLen > 0 &&
-        self->paragraphNoteCount < 32 &&
+  // Closing paragraph note in Pass 1
+  if (strcmp(name, "p") == 0 && self->insideParagraphNote && self->depth - 1 == self->paragraphNoteDepth) {
+    if (self->isPass1CollectingAsides && self->currentParagraphNoteTextLen > 0 && self->paragraphNoteCount < 32 &&
         self->currentParagraphNoteId[0] != '\0') {
-
       // Copy ID
-      strncpy(self->paragraphNotes[self->paragraphNoteCount].id,
-              self->currentParagraphNoteId, 15);
+      strncpy(self->paragraphNotes[self->paragraphNoteCount].id, self->currentParagraphNoteId, 15);
       self->paragraphNotes[self->paragraphNoteCount].id[15] = '\0';
 
       // Allocate memory for text
       size_t textLen = strlen(self->currentParagraphNoteText);
-      self->paragraphNotes[self->paragraphNoteCount].text =
-          static_cast<char*>(malloc(textLen + 1));
+      self->paragraphNotes[self->paragraphNoteCount].text = static_cast<char*>(malloc(textLen + 1));
 
       if (self->paragraphNotes[self->paragraphNoteCount].text) {
-        strcpy(self->paragraphNotes[self->paragraphNoteCount].text,
-               self->currentParagraphNoteText);
+        strcpy(self->paragraphNotes[self->paragraphNoteCount].text, self->currentParagraphNoteText);
 
-        Serial.printf("[%lu] [PNOTE] Stored: %s -> %.80s... (allocated %d bytes)\n",
-                      millis(), self->currentParagraphNoteId,
-                      self->currentParagraphNoteText, textLen + 1);
+        Serial.printf("[%lu] [PNOTE] Stored: %s -> %.80s... (allocated %d bytes)\n", millis(),
+                      self->currentParagraphNoteId, self->currentParagraphNoteText, textLen + 1);
 
         self->paragraphNoteCount++;
       }
-        }
+    }
 
     self->insideParagraphNote = false;
     self->depth -= 1;
@@ -480,35 +467,27 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
   }
 
   // Closing aside - handle differently for Pass 1 vs Pass 2
-  if (strcmp(name, "aside") == 0 && self->insideAsideFootnote &&
-      self->depth - 1 == self->asideDepth) {
-
+  if (strcmp(name, "aside") == 0 && self->insideAsideFootnote && self->depth - 1 == self->asideDepth) {
     // Store footnote ONLY in Pass 1
-    if (self->isPass1CollectingAsides &&
-        self->currentAsideTextLen > 0 &&
-        self->inlineFootnoteCount < 16) {
-
+    if (self->isPass1CollectingAsides && self->currentAsideTextLen > 0 && self->inlineFootnoteCount < 16) {
       // Copy ID (max 2 digits)
-      strncpy(self->inlineFootnotes[self->inlineFootnoteCount].id,
-              self->currentAsideId, 2);
+      strncpy(self->inlineFootnotes[self->inlineFootnoteCount].id, self->currentAsideId, 2);
       self->inlineFootnotes[self->inlineFootnoteCount].id[2] = '\0';
 
       // DYNAMIC ALLOCATION: allocate exactly the needed size + 1
       size_t textLen = strlen(self->currentAsideText);
-      self->inlineFootnotes[self->inlineFootnoteCount].text =
-          static_cast<char*>(malloc(textLen + 1));
+      self->inlineFootnotes[self->inlineFootnoteCount].text = static_cast<char*>(malloc(textLen + 1));
 
       if (self->inlineFootnotes[self->inlineFootnoteCount].text) {
-        strcpy(self->inlineFootnotes[self->inlineFootnoteCount].text,
-               self->currentAsideText);
+        strcpy(self->inlineFootnotes[self->inlineFootnoteCount].text, self->currentAsideText);
 
-        Serial.printf("[%lu] [ASIDE] Stored: %s -> %.80s... (allocated %d bytes)\n",
-                      millis(), self->currentAsideId, self->currentAsideText, textLen + 1);
+        Serial.printf("[%lu] [ASIDE] Stored: %s -> %.80s... (allocated %d bytes)\n", millis(), self->currentAsideId,
+                      self->currentAsideText, textLen + 1);
 
         self->inlineFootnoteCount++;
       } else {
-        Serial.printf("[%lu] [ASIDE] ERROR: Failed to allocate %d bytes for footnote %s\n",
-                      millis(), textLen + 1, self->currentAsideId);
+        Serial.printf("[%lu] [ASIDE] ERROR: Failed to allocate %d bytes for footnote %s\n", millis(), textLen + 1,
+                      self->currentAsideId);
       }
     }
 
@@ -529,9 +508,7 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
     self->insideNoteref = false;
 
     if (self->currentNoterefTextLen > 0) {
-      Serial.printf("[%lu] [NOTEREF] %s -> %s\n", millis(),
-                    self->currentNoterefText,
-                    self->currentNoterefHref);
+      Serial.printf("[%lu] [NOTEREF] %s -> %s\n", millis(), self->currentNoterefText, self->currentNoterefHref);
 
       // Add footnote first (this does the rewriting)
       self->addFootnoteToCurrentPage(self->currentNoterefText, self->currentNoterefHref);
@@ -668,8 +645,7 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
     done = feof(file);
 
     if (XML_ParseBuffer(parser1, static_cast<int>(len), done) == XML_STATUS_ERROR) {
-      Serial.printf("[%lu] [EHP] Parse error at line %lu:\n%s\n", millis(),
-                    XML_GetCurrentLineNumber(parser1),
+      Serial.printf("[%lu] [EHP] Parse error at line %lu:\n%s\n", millis(), XML_GetCurrentLineNumber(parser1),
                     XML_ErrorString(XML_GetErrorCode(parser1)));
       XML_ParserFree(parser1);
       fclose(file);
@@ -680,11 +656,9 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
   XML_ParserFree(parser1);
   fclose(file);
 
-  Serial.printf("[%lu] [PARSER] Pass 1 complete: found %d inline footnotes\n",
-                millis(), inlineFootnoteCount);
+  Serial.printf("[%lu] [PARSER] Pass 1 complete: found %d inline footnotes\n", millis(), inlineFootnoteCount);
   for (int i = 0; i < inlineFootnoteCount; i++) {
-    Serial.printf("[%lu] [PARSER]   - %s: %.80s\n",
-                  millis(), inlineFootnotes[i].id, inlineFootnotes[i].text);
+    Serial.printf("[%lu] [PARSER]   - %s: %.80s\n", millis(), inlineFootnotes[i].id, inlineFootnotes[i].text);
   }
 
   // ============================================================================
@@ -743,8 +717,7 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
     done = feof(file);
 
     if (XML_ParseBuffer(parser2, static_cast<int>(len), done) == XML_STATUS_ERROR) {
-      Serial.printf("[%lu] [EHP] Parse error at line %lu:\n%s\n", millis(),
-                    XML_GetCurrentLineNumber(parser2),
+      Serial.printf("[%lu] [EHP] Parse error at line %lu:\n%s\n", millis(), XML_GetCurrentLineNumber(parser2),
                     XML_ErrorString(XML_GetErrorCode(parser2)));
       XML_ParserFree(parser2);
       fclose(file);
@@ -819,4 +792,3 @@ void ChapterHtmlSlimParser::makePages() {
     currentPageNextY += lineHeight / 2;
   }
 }
-

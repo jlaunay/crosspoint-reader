@@ -1,14 +1,15 @@
 #pragma once
 
 #include <expat.h>
+
 #include <climits>
 #include <cstring>
 #include <functional>
 #include <memory>
 
+#include "../FootnoteEntry.h"
 #include "../ParsedText.h"
 #include "../blocks/TextBlock.h"
-#include "../FootnoteEntry.h"
 
 class Page;
 class GfxRenderer;
@@ -25,19 +26,15 @@ struct InlineFootnote {
   char id[3];
   char* text;
 
-  InlineFootnote() : text(nullptr) {
-    id[0] = '\0';
-  }
+  InlineFootnote() : text(nullptr) { id[0] = '\0'; }
 };
 
 // Struct to store collected inline footnotes from <p class="note">
 struct ParagraphNote {
-  char id[16];      // ID from <a id="rnote1">
-  char* text;       // Pointer to dynamically allocated text
+  char id[16];  // ID from <a id="rnote1">
+  char* text;   // Pointer to dynamically allocated text
 
-  ParagraphNote() : text(nullptr) {
-    id[0] = '\0';
-  }
+  ParagraphNote() : text(nullptr) { id[0] = '\0'; }
 
   ~ParagraphNote() {
     if (text) {
@@ -88,7 +85,7 @@ class ChapterHtmlSlimParser {
   int asideDepth = 0;
   char currentAsideId[3] = {0};
 
-  //Paragraph note tracking
+  // Paragraph note tracking
   bool insideParagraphNote = false;
   int paragraphNoteDepth = 0;
   char currentParagraphNoteId[16] = {0};
@@ -120,7 +117,7 @@ class ChapterHtmlSlimParser {
   // inline footnotes
   InlineFootnote inlineFootnotes[16];
   int inlineFootnoteCount = 0;
-  //paragraph notes
+  // paragraph notes
   ParagraphNote paragraphNotes[32];
   int paragraphNoteCount = 0;
 
@@ -161,7 +158,5 @@ class ChapterHtmlSlimParser {
   bool parseAndBuildPages();
   void addLineToPage(std::shared_ptr<TextBlock> line);
 
-  void setNoterefCallback(const std::function<void(Noteref&)>& callback) {
-    noterefCallback = callback;
-  }
+  void setNoterefCallback(const std::function<void(Noteref&)>& callback) { noterefCallback = callback; }
 };

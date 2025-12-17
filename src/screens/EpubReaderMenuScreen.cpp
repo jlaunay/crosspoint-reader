@@ -2,7 +2,9 @@
 // Created by jlaunay on 13/12/2025.
 //
 #include "EpubReaderMenuScreen.h"
+
 #include <GfxRenderer.h>
+
 #include "config.h"
 
 constexpr int MENU_ITEMS_COUNT = 2;
@@ -74,10 +76,7 @@ void EpubReaderMenuScreen::renderScreen() {
   const auto pageWidth = renderer.getScreenWidth();
   renderer.drawCenteredText(READER_FONT_ID, 10, "Menu", true, BOLD);
 
-  const char* menuItems[MENU_ITEMS_COUNT] = {
-    "Go to chapter",
-    "View footnotes"
-  };
+  const char* menuItems[MENU_ITEMS_COUNT] = {"Go to chapter", "View footnotes"};
 
   const int startY = 100;
   const int itemHeight = 40;

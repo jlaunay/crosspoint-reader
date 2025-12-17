@@ -73,8 +73,8 @@ void EpubReaderChapterSelectionScreen::buildFilteredChapterList() {
     filteredSpineIndices.push_back(i);
   }
 
-  Serial.printf("[%lu] [CHAP] Filtered chapters: %d out of %d\n",
-                millis(), filteredSpineIndices.size(), epub->getSpineItemsCount());
+  Serial.printf("[%lu] [CHAP] Filtered chapters: %d out of %d\n", millis(), filteredSpineIndices.size(),
+                epub->getSpineItemsCount());
 }
 
 void EpubReaderChapterSelectionScreen::handleInput() {

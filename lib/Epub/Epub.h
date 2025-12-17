@@ -30,9 +30,7 @@ class Epub {
 
  public:
   explicit Epub(std::string filepath, const std::string& cacheDir)
-      : filepath(std::move(filepath)),
-        footnotePages(nullptr),
-        virtualSpineItems(nullptr) {
+      : filepath(std::move(filepath)), footnotePages(nullptr), virtualSpineItems(nullptr) {
     cachePath = cacheDir + "/epub_" + std::to_string(std::hash<std::string>{}(this->filepath));
   }
 

@@ -27,7 +27,7 @@ class EpubReaderChapterSelectionScreen final : public Screen {
   void renderScreen();
   void buildFilteredChapterList();
 
-public:
+ public:
   explicit EpubReaderChapterSelectionScreen(GfxRenderer& renderer, InputManager& inputManager,
                                             const std::shared_ptr<Epub>& epub, const int currentSpineIndex,
                                             const std::function<void()>& onGoBack,
