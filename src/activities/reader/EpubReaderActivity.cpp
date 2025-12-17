@@ -46,13 +46,14 @@ void EpubReaderActivity::onEnter() {
     nextPageNumber = data[2] + (data[3] << 8);
     Serial.printf("[%lu] [ERS] Loaded cache: %d, %d\n", millis(), currentSpineIndex, nextPageNumber);
     f.close();
+    f.close();
   }
 
   // Trigger first update
   updateRequired = true;
 
   xTaskCreate(&EpubReaderActivity::taskTrampoline, "EpubReaderActivityTask",
-              8192,               // Stack size
+              24576,               // Stack size
               this,               // Parameters
               1,                  // Priority
               &displayTaskHandle  // Task handle
