@@ -70,5 +70,5 @@ class Epub {
   int findVirtualSpineIndex(const std::string& filename) const;
 
   size_t getBookSize() const;
-  uint8_t calculateProgress(const int currentSpineIndex, const float currentSpineRead) const;
+  uint8_t calculateProgress(const int currentSpineIndex, const float currentSpineRead);
 };
