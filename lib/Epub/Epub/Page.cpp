@@ -1,17 +1,16 @@
 #include "Page.h"
-
 #include <HardwareSerial.h>
 #include <Serialization.h>
 
-constexpr uint8_t PAGE_FILE_VERSION = 3;
+constexpr uint8_t PAGE_FILE_VERSION = 6;  // Incremented
 
-void PageLine::render(GfxRenderer& renderer, const int fontId) { block->render(renderer, fontId, xPos, yPos); }
+void PageLine::render(GfxRenderer& renderer, const int fontId) {
+  block->render(renderer, fontId, xPos, yPos);
+}
 
 void PageLine::serialize(std::ostream& os) {
   serialization::writePod(os, xPos);
   serialization::writePod(os, yPos);
-
-  // serialize TextBlock pointed to by PageLine
   block->serialize(os);
 }
 
@@ -26,21 +25,24 @@ std::unique_ptr<PageLine> PageLine::deserialize(std::istream& is) {
 }
 
 void Page::render(GfxRenderer& renderer, const int fontId) const {
-  for (auto& element : elements) {
-    element->render(renderer, fontId);
+  for (int i = 0; i < elementCount; i++) {
+    elements[i]->render(renderer, fontId);
   }
 }
 
 void Page::serialize(std::ostream& os) const {
   serialization::writePod(os, PAGE_FILE_VERSION);
+  serialization::writePod(os, static_cast<uint32_t>(elementCount));
 
-  const uint32_t count = elements.size();
-  serialization::writePod(os, count);
-
-  for (const auto& el : elements) {
-    // Only PageLine exists currently
+  for (int i = 0; i < elementCount; i++) {
     serialization::writePod(os, static_cast<uint8_t>(TAG_PageLine));
-    el->serialize(os);
+    elements[i]->serialize(os);
+  }
+
+  serialization::writePod(os, static_cast<int32_t>(footnoteCount));
+  for (int i = 0; i < footnoteCount; i++) {
+    os.write(footnotes[i].number, 3);
+    os.write(footnotes[i].href, 64);
   }
 }
 
@@ -57,17 +59,26 @@ std::unique_ptr<Page> Page::deserialize(std::istream& is) {
   uint32_t count;
   serialization::readPod(is, count);
 
-  for (uint32_t i = 0; i < count; i++) {
+  for (uint32_t i = 0; i < count && i < page->elementCapacity; i++) {
     uint8_t tag;
     serialization::readPod(is, tag);
 
     if (tag == TAG_PageLine) {
       auto pl = PageLine::deserialize(is);
-      page->elements.push_back(std::move(pl));
+      page->addElement(std::move(pl));
     } else {
       Serial.printf("[%lu] [PGE] Deserialization failed: Unknown tag %u\n", millis(), tag);
       return nullptr;
     }
+  }
+
+  int32_t footnoteCount;
+  serialization::readPod(is, footnoteCount);
+  page->footnoteCount = (footnoteCount < page->footnoteCapacity) ? footnoteCount : page->footnoteCapacity;
+
+  for (int i = 0; i < page->footnoteCount; i++) {
+    is.read(page->footnotes[i].number, 3);
+    is.read(page->footnotes[i].href, 64);
   }
 
   return page;

@@ -4,6 +4,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
+#include "EpubReaderFootnotesScreen.h"
 
 #include "Screen.h"
 
@@ -18,6 +19,11 @@ class EpubReaderScreen final : public Screen {
   int pagesUntilFullRefresh = 0;
   bool updateRequired = false;
   const std::function<void()> onGoHome;
+  FootnotesData currentPageFootnotes;
+
+  int savedSpineIndex = -1;
+  int savedPageNumber = -1;
+  bool isViewingFootnote = false;
 
   static void taskTrampoline(void* param);
   [[noreturn]] void displayTaskLoop();
@@ -25,7 +31,11 @@ class EpubReaderScreen final : public Screen {
   void renderContents(std::unique_ptr<Page> p);
   void renderStatusBar() const;
 
- public:
+  // Footnote navigation methods
+  void navigateToHref(const char* href, bool savePosition = false);
+  void restoreSavedPosition();
+
+public:
   explicit EpubReaderScreen(GfxRenderer& renderer, InputManager& inputManager, std::unique_ptr<Epub> epub,
                             const std::function<void()>& onGoHome)
       : Screen(renderer, inputManager), epub(std::move(epub)), onGoHome(onGoHome) {}

@@ -5,6 +5,7 @@
 #include <freertos/task.h>
 
 #include <memory>
+#include <vector>
 
 #include "Screen.h"
 
@@ -18,11 +19,15 @@ class EpubReaderChapterSelectionScreen final : public Screen {
   const std::function<void()> onGoBack;
   const std::function<void(int newSpineIndex)> onSelectSpineIndex;
 
+  // Filtered list of spine indices (excluding footnote pages)
+  std::vector<int> filteredSpineIndices;
+
   static void taskTrampoline(void* param);
   [[noreturn]] void displayTaskLoop();
   void renderScreen();
+  void buildFilteredChapterList();
 
- public:
+public:
   explicit EpubReaderChapterSelectionScreen(GfxRenderer& renderer, InputManager& inputManager,
                                             const std::shared_ptr<Epub>& epub, const int currentSpineIndex,
                                             const std::function<void()>& onGoBack,
