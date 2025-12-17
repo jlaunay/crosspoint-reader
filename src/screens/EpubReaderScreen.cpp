@@ -488,19 +488,29 @@ void EpubReaderScreen::navigateToHref(const char* href, bool savePosition) {
 
   int targetSpineIndex = -1;
 
-  // FIRST: Check if we have an inline footnote for this anchor
+  // FIRST: Check if we have an inline footnote or paragraph note for this anchor
   if (!anchor.empty()) {
+    // Try inline footnote first
     std::string inlineFilename = "inline_" + anchor + ".html";
     Serial.printf("[%lu] [ERS] Looking for inline footnote: %s\n",
                   millis(), inlineFilename.c_str());
 
     targetSpineIndex = epub->findVirtualSpineIndex(inlineFilename);
 
+    // If not found, try paragraph note
+    if (targetSpineIndex == -1) {
+      std::string pnoteFilename = "pnote_" + anchor + ".html";
+      Serial.printf("[%lu] [ERS] Looking for paragraph note: %s\n",
+                    millis(), pnoteFilename.c_str());
+
+      targetSpineIndex = epub->findVirtualSpineIndex(pnoteFilename);
+    }
+
     if (targetSpineIndex != -1) {
-      Serial.printf("[%lu] [ERS] Found inline footnote at index: %d\n",
+      Serial.printf("[%lu] [ERS] Found note at virtual index: %d\n",
                     millis(), targetSpineIndex);
 
-      // Navigate to inline footnote
+      // Navigate to the note
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       currentSpineIndex = targetSpineIndex;
       nextPageNumber = 0;
@@ -510,7 +520,7 @@ void EpubReaderScreen::navigateToHref(const char* href, bool savePosition) {
       updateRequired = true;
       return;
     } else {
-      Serial.printf("[%lu] [ERS] No inline footnote found, trying normal navigation\n",
+      Serial.printf("[%lu] [ERS] No virtual note found, trying normal navigation\n",
                     millis());
     }
   }

@@ -214,27 +214,28 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
                                 [this](std::unique_ptr<Page> page) { this->onPageComplete(std::move(page)); },
                                 cachePath);
 
-  // Track which inline footnotes are actually referenced in this file
+  // Track which inline footnotes AND paragraph notes are actually referenced in this file
   std::set<std::string> rewrittenInlineIds;
   int noterefCount = 0;
 
   visitor.setNoterefCallback([this, &noterefCount, &rewrittenInlineIds](Noteref& noteref) {
     Serial.printf("[%lu] [SCT] Callback noteref: %s -> %s\n", millis(), noteref.number, noteref.href);
 
-    // Check if this was rewritten to an inline footnote
+    // Extract the ID from the href for tracking
     std::string href(noteref.href);
-    if (href.find("inline_") == 0) {
-      // Extract ID from "inline_N3.html#N3"
+
+    // Check if this was rewritten to an inline or paragraph note
+    if (href.find("inline_") == 0 || href.find("pnote_") == 0) {
       size_t underscorePos = href.find('_');
       size_t dotPos = href.find('.');
 
       if (underscorePos != std::string::npos && dotPos != std::string::npos) {
-        std::string inlineId = href.substr(underscorePos + 1, dotPos - underscorePos - 1);
-        rewrittenInlineIds.insert(inlineId);
-        Serial.printf("[%lu] [SCT] Marked inline footnote as rewritten: %s\n",
-                      millis(), inlineId.c_str());
+        std::string noteId = href.substr(underscorePos + 1, dotPos - underscorePos - 1);
+        rewrittenInlineIds.insert(noteId);
+        Serial.printf("[%lu] [SCT] Marked note as rewritten: %s\n",
+                      millis(), noteId.c_str());
       }
-    } else {
+    }else {
       // Normal external footnote
       epub->markAsFootnotePage(noteref.href);
     }
@@ -312,7 +313,6 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
 
       Serial.printf("[%lu] [SCT] Generated inline footnote file\n", millis());
 
-      // Add as virtual spine item (full path for epub to find it)
       int virtualIndex = epub->addVirtualSpineItem(fullPath);
       Serial.printf("[%lu] [SCT] Added virtual spine item at index %d\n", millis(), virtualIndex);
 
@@ -324,6 +324,65 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
       Serial.printf("[%lu] [SCT] Failed to create inline file\n", millis());
     }
   }
+
+// Generate paragraph note HTML files
+Serial.printf("[%lu] [SCT] Found %d paragraph notes\n", millis(), visitor.paragraphNoteCount);
+
+for (int i = 0; i < visitor.paragraphNoteCount; i++) {
+  const char* pnoteId = visitor.paragraphNotes[i].id;
+  const char* pnoteText = visitor.paragraphNotes[i].text;
+
+  if (!pnoteText || strlen(pnoteText) == 0) {
+    continue;
+  }
+
+  // Check if this paragraph note was referenced
+  if (rewrittenInlineIds.find(std::string(pnoteId)) == rewrittenInlineIds.end()) {
+    Serial.printf("[%lu] [SCT] Skipping unreferenced paragraph note: %s\n", millis(), pnoteId);
+    continue;
+  }
+
+  // Create filename: pnote_rnote1.html
+  char pnoteFilename[64];
+  snprintf(pnoteFilename, sizeof(pnoteFilename), "pnote_%s.html", pnoteId);
+
+  std::string fullPath = epub->getCachePath() + "/" + std::string(pnoteFilename);
+
+  Serial.printf("[%lu] [SCT] Generating paragraph note file: %s\n", millis(), fullPath.c_str());
+
+  File file = SD.open(fullPath.c_str(), FILE_WRITE, true);
+  if (file) {
+    file.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+    file.println("<!DOCTYPE html>");
+    file.println("<html xmlns=\"http://www.w3.org/1999/xhtml\">");
+    file.println("<head>");
+    file.println("<meta charset=\"UTF-8\"/>");
+    file.println("<title>Note</title>");
+    file.println("</head>");
+    file.println("<body>");
+    file.print("<p id=\"");
+    file.print(pnoteId);
+    file.print("\">");
+
+    if (!writeEscapedXml(file, pnoteText)) {
+      Serial.printf("[%lu] [SCT] Warning: writeEscapedXml may have failed\n", millis());
+    }
+
+    file.println("</p>");
+    file.println("</body>");
+    file.println("</html>");
+    file.close();
+
+    Serial.printf("[%lu] [SCT] Generated paragraph note file\n", millis());
+
+    int virtualIndex = epub->addVirtualSpineItem(fullPath);
+    Serial.printf("[%lu] [SCT] Added virtual spine item at index %d\n", millis(), virtualIndex);
+
+    char newHref[128];
+    snprintf(newHref, sizeof(newHref), "%s#%s", pnoteFilename, pnoteId);
+    epub->markAsFootnotePage(newHref);
+  }
+}
 
   Serial.printf("[%lu] [SCT] Total noterefs found: %d\n", millis(), noterefCount);
 

@@ -84,9 +84,26 @@ void ChapterHtmlSlimParser::addFootnoteToCurrentPage(const char* number, const c
         strncpy(currentPageFootnotes[currentPageFootnoteCount].href, rewrittenHref, 63);
         currentPageFootnotes[currentPageFootnoteCount].href[63] = '\0';
 
-        Serial.printf("[%lu] [ADDFT] ✓ Rewrote inline href to: %s\n", millis(), rewrittenHref);
+        Serial.printf("[%lu] [ADDFT] Rewrote inline href to: %s\n", millis(), rewrittenHref);
         foundInline = true;
         break;
+      }
+    }
+
+    //Check if we have this as a paragraph note
+    if (!foundInline) {
+      for (int i = 0; i < paragraphNoteCount; i++) {
+        if (strcmp(paragraphNotes[i].id, inlineId) == 0) {
+          char rewrittenHref[64];
+          snprintf(rewrittenHref, sizeof(rewrittenHref), "pnote_%s.html#%s", inlineId, inlineId);
+
+          strncpy(currentPageFootnotes[currentPageFootnoteCount].href, rewrittenHref, 63);
+          currentPageFootnotes[currentPageFootnoteCount].href[63] = '\0';
+
+          Serial.printf("[%lu] [ADDFT] Rewrote paragraph note href to: %s\n", millis(), rewrittenHref);
+          foundInline = true;
+          break;
+        }
       }
     }
 
@@ -112,6 +129,43 @@ void ChapterHtmlSlimParser::addFootnoteToCurrentPage(const char* number, const c
 void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char* name, const XML_Char** atts) {
   auto* self = static_cast<ChapterHtmlSlimParser*>(userData);
 
+  // ============================================================================
+  // PASS 1: Detect and collect <p class="note">
+  // ============================================================================
+  if (strcmp(name, "p") == 0 && self->isPass1CollectingAsides) {
+    const char* classAttr = getAttribute(atts, "class");
+
+    if (classAttr && (strcmp(classAttr, "note") == 0 || strstr(classAttr, "note"))) {
+      Serial.printf("[%lu] [PNOTE] Found paragraph note (pass1=1)\n", millis());
+
+      self->insideParagraphNote = true;
+      self->paragraphNoteDepth = self->depth;
+      self->currentParagraphNoteTextLen = 0;
+      self->currentParagraphNoteText[0] = '\0';
+      self->currentParagraphNoteId[0] = '\0';
+
+      self->depth += 1;
+      return;
+    }
+  }
+
+  // Inside paragraph note in Pass 1, look for <a id="rnoteX">
+  if (self->insideParagraphNote && self->isPass1CollectingAsides && strcmp(name, "a") == 0) {
+    const char* id = getAttribute(atts, "id");
+
+    if (id && strncmp(id, "rnote", 5) == 0) {
+      strncpy(self->currentParagraphNoteId, id, 15);
+      self->currentParagraphNoteId[15] = '\0';
+      Serial.printf("[%lu] [PNOTE] Found note ID: %s\n", millis(), id);
+    }
+
+    self->depth += 1;
+    return;
+  }
+
+  // ============================================================================
+  // PASS 1: Detect and collect <aside epub:type="footnote">
+  // ============================================================================
   if (strcmp(name, "aside") == 0) {
     const char* epubType = getAttribute(atts, "epub:type");
     const char* id = getAttribute(atts, "id");
@@ -130,8 +184,8 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
         strncpy(self->currentAsideId, id, 2);
         self->currentAsideId[2] = '\0';
       } else {
-        // Pass 2: Find the aside text and output it as normal content
-        Serial.printf("[%lu] [ASIDE] Rendering aside as content in Pass 2: id=%s\n", millis(), id);
+        // Pass 2: Skip the aside (we already have it from Pass 1)
+        Serial.printf("[%lu] [ASIDE] Skipping aside in Pass 2: id=%s\n", millis(), id);
 
         // Find the inline footnote text
         for (int i = 0; i < self->inlineFootnoteCount; i++) {
@@ -159,17 +213,31 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     }
   }
 
-  // During pass 1, we ONLY collect asides, skip everything else
+  // ============================================================================
+  // PASS 1: Skip everything else
+  // ============================================================================
   if (self->isPass1CollectingAsides) {
     self->depth += 1;
     return;
   }
 
-  // Pass 2: Normal parsing, but skip asides (we already have them)
-  if (self->insideAsideFootnote) {
-    self->depth += 1;
-    return;
+  // ============================================================================
+  // PASS 2: Skip <p class="note"> (we already have them from Pass 1)
+  // ============================================================================
+  if (strcmp(name, "p") == 0) {
+    const char* classAttr = getAttribute(atts, "class");
+
+    if (classAttr && (strcmp(classAttr, "note") == 0 || strstr(classAttr, "note"))) {
+      Serial.printf("[%lu] [PNOTE] Skipping paragraph note in Pass 2\n", millis());
+      self->skipUntilDepth = self->depth;
+      self->depth += 1;
+      return;
+    }
   }
+
+  // ============================================================================
+  // PASS 2: Normal parsing
+  // ============================================================================
 
   // Middle of skip
   if (self->skipUntilDepth < self->depth) {
@@ -182,7 +250,16 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     const char* epubType = getAttribute(atts, "epub:type");
     const char* href = getAttribute(atts, "href");
 
-    if (epubType && strcmp(epubType, "noteref") == 0) {
+    // Detect epub:type="noteref" OR href="#rnoteX" pattern
+    bool isNoteref = (epubType && strcmp(epubType, "noteref") == 0);
+
+    // Also detect links with href starting with "#rnote" (reverse note pattern)
+    if (!isNoteref && href && href[0] == '#' && strncmp(href + 1, "rnote", 5) == 0) {
+      isNoteref = true;
+      Serial.printf("[%lu] [NOTEREF] Detected reverse note pattern: href=%s\n", millis(), href);
+    }
+
+    if (isNoteref) {
       Serial.printf("[%lu] [NOTEREF] Found noteref: href=%s\n", millis(), href ? href : "null");
       self->insideNoteref = true;
       self->currentNoterefTextLen = 0;
@@ -237,6 +314,32 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
 void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char* s, const int len) {
   auto* self = static_cast<ChapterHtmlSlimParser*>(userData);
 
+  //Collect paragraph note text in Pass 1
+  if (self->insideParagraphNote && self->isPass1CollectingAsides) {
+    for (int i = 0; i < len; i++) {
+      if (self->currentParagraphNoteTextLen >= self->MAX_PNOTE_BUFFER - 2) {
+        if (self->currentParagraphNoteTextLen == self->MAX_PNOTE_BUFFER - 2) {
+          Serial.printf("[%lu] [PNOTE] WARNING: Note text truncated at %d chars\n",
+                        millis(), self->MAX_PNOTE_BUFFER - 2);
+        }
+        break;
+      }
+
+      unsigned char c = (unsigned char)s[i];
+
+      if (isWhitespace(c)) {
+        if (self->currentParagraphNoteTextLen > 0 &&
+            self->currentParagraphNoteText[self->currentParagraphNoteTextLen - 1] != ' ') {
+          self->currentParagraphNoteText[self->currentParagraphNoteTextLen++] = ' ';
+            }
+      } else if (c >= 32 || c >= 0x80) {  // Accept printable ASCII AND UTF-8
+        self->currentParagraphNoteText[self->currentParagraphNoteTextLen++] = c;
+      }
+    }
+    self->currentParagraphNoteText[self->currentParagraphNoteTextLen] = '\0';
+    return;
+  }
+
   // If inside aside, collect the text ONLY in pass 1
   if (self->insideAsideFootnote) {
     if (!self->isPass1CollectingAsides) {
@@ -276,8 +379,10 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
   // Rest of characterData logic for pass 2...
   if (self->insideNoteref) {
     for (int i = 0; i < len; i++) {
-      if (!isWhitespace(s[i]) && self->currentNoterefTextLen < 15) {
-        self->currentNoterefText[self->currentNoterefTextLen++] = s[i];
+      unsigned char c = (unsigned char)s[i];
+      // Skip whitespace and brackets []
+      if (!isWhitespace(c) && c != '[' && c != ']' && self->currentNoterefTextLen < 15) {
+        self->currentNoterefText[self->currentNoterefTextLen++] = c;
         self->currentNoterefText[self->currentNoterefTextLen] = '\0';
       }
     }
@@ -319,6 +424,42 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
 
 void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* name) {
   auto* self = static_cast<ChapterHtmlSlimParser*>(userData);
+
+  //Closing paragraph note in Pass 1
+  if (strcmp(name, "p") == 0 && self->insideParagraphNote &&
+      self->depth - 1 == self->paragraphNoteDepth) {
+
+    if (self->isPass1CollectingAsides &&
+        self->currentParagraphNoteTextLen > 0 &&
+        self->paragraphNoteCount < 32 &&
+        self->currentParagraphNoteId[0] != '\0') {
+
+      // Copy ID
+      strncpy(self->paragraphNotes[self->paragraphNoteCount].id,
+              self->currentParagraphNoteId, 15);
+      self->paragraphNotes[self->paragraphNoteCount].id[15] = '\0';
+
+      // Allocate memory for text
+      size_t textLen = strlen(self->currentParagraphNoteText);
+      self->paragraphNotes[self->paragraphNoteCount].text =
+          static_cast<char*>(malloc(textLen + 1));
+
+      if (self->paragraphNotes[self->paragraphNoteCount].text) {
+        strcpy(self->paragraphNotes[self->paragraphNoteCount].text,
+               self->currentParagraphNoteText);
+
+        Serial.printf("[%lu] [PNOTE] Stored: %s -> %.80s... (allocated %d bytes)\n",
+                      millis(), self->currentParagraphNoteId,
+                      self->currentParagraphNoteText, textLen + 1);
+
+        self->paragraphNoteCount++;
+      }
+        }
+
+    self->insideParagraphNote = false;
+    self->depth -= 1;
+    return;
+  }
 
   // Closing aside - handle differently for Pass 1 vs Pass 2
   if (strcmp(name, "aside") == 0 && self->insideAsideFootnote &&
@@ -446,7 +587,9 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
   depth = 0;
   skipUntilDepth = INT_MAX;
   insideAsideFootnote = false;
+  insideParagraphNote = false;
   inlineFootnoteCount = 0;
+  paragraphNoteCount = 0;
   isPass1CollectingAsides = true;
 
   XML_Parser parser1 = XML_ParserCreate(nullptr);

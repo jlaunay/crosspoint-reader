@@ -30,6 +30,26 @@ struct InlineFootnote {
   }
 };
 
+// Struct to store collected inline footnotes from <p class="note">
+struct ParagraphNote {
+  char id[16];      // ID from <a id="rnote1">
+  char* text;       // Pointer to dynamically allocated text
+
+  ParagraphNote() : text(nullptr) {
+    id[0] = '\0';
+  }
+
+  ~ParagraphNote() {
+    if (text) {
+      free(text);
+      text = nullptr;
+    }
+  }
+
+  ParagraphNote(const ParagraphNote&) = delete;
+  ParagraphNote& operator=(const ParagraphNote&) = delete;
+};
+
 class ChapterHtmlSlimParser {
   const char* filepath;
   GfxRenderer& renderer;
@@ -68,6 +88,14 @@ class ChapterHtmlSlimParser {
   int asideDepth = 0;
   char currentAsideId[3] = {0};
 
+  //Paragraph note tracking
+  bool insideParagraphNote = false;
+  int paragraphNoteDepth = 0;
+  char currentParagraphNoteId[16] = {0};
+  static constexpr int MAX_PNOTE_BUFFER = 512;
+  char currentParagraphNoteText[MAX_PNOTE_BUFFER] = {0};
+  int currentParagraphNoteTextLen = 0;
+
   // Temporary buffer for accumulation, will be copied to dynamic allocation
   static constexpr int MAX_ASIDE_BUFFER = 2048;
   char currentAsideText[MAX_ASIDE_BUFFER] = {0};
@@ -89,9 +117,12 @@ class ChapterHtmlSlimParser {
   static void XMLCALL endElement(void* userData, const XML_Char* name);
 
  public:
-  // PUBLIC ACCESS to inline footnotes (needed by Section.cpp)
+  // inline footnotes
   InlineFootnote inlineFootnotes[16];
   int inlineFootnoteCount = 0;
+  //paragraph notes
+  ParagraphNote paragraphNotes[32];
+  int paragraphNoteCount = 0;
 
   explicit ChapterHtmlSlimParser(const char* filepath, GfxRenderer& renderer, const int fontId,
                                  const float lineCompression, const int marginTop, const int marginRight,

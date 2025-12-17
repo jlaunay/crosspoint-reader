@@ -61,7 +61,7 @@ void EpubReaderFootnotesScreen::render() {
   renderer.drawText(READER_FONT_ID, marginLeft, 20, "Footnotes", BOLD);
 
   if (footnotes.getCount() == 0) {
-    renderer.drawText(SMALL_FONT_ID, marginLeft, startY, "No footnotes on this page");
+    renderer.drawText(SMALL_FONT_ID, marginLeft, startY + 20, "No footnotes on this page");
     renderer.displayBuffer();
     return;
   }
