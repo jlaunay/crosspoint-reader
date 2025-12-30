@@ -18,6 +18,8 @@
 #include "activities/reader/ReaderActivity.h"
 #include "activities/settings/SettingsActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
+#include "activities/bluetooth/BluetoothSettingsActivity.h"
+#include "BluetoothPageTurner.h"
 #include "fontIds.h"
 
 #define SPI_FQ 40000000
@@ -194,6 +196,11 @@ void enterDeepSleep() {
   exitActivity();
   enterNewActivity(new SleepActivity(renderer, mappedInputManager));
 
+  // Clean bluetooth
+  if (BT_PAGE_TURNER.isInitialized()) {
+    BT_PAGE_TURNER.shutdown();
+  }
+
   einkDisplay.deepSleep();
   Serial.printf("[%lu] [   ] Power button press calibration value: %lu ms\n", millis(), t2 - t1);
   Serial.printf("[%lu] [   ] Entering deep sleep.\n", millis());
@@ -222,10 +229,16 @@ void onGoToSettings() {
   enterNewActivity(new SettingsActivity(renderer, mappedInputManager, onGoHome));
 }
 
+void onGoToBluetooth() {
+  exitActivity();
+  enterNewActivity(new BluetoothSettingsActivity(renderer, mappedInputManager, onGoHome));
+}
+
+
 void onGoHome() {
   exitActivity();
   enterNewActivity(new HomeActivity(renderer, mappedInputManager, onContinueReading, onGoToReaderHome, onGoToSettings,
-                                    onGoToFileTransfer));
+                                    onGoToFileTransfer, onGoToBluetooth));  // <-- Ajouter onGoToBluetooth
 }
 
 void setupDisplayAndFonts() {
@@ -320,6 +333,24 @@ void loop() {
   static unsigned long lastActivityTime = millis();
   if (inputManager.wasAnyPressed() || inputManager.wasAnyReleased()) {
     lastActivityTime = millis();  // Reset inactivity timer
+  }
+
+  // Bluetooth
+  if (BT_PAGE_TURNER.isInitialized()) {
+    auto btKey = BT_PAGE_TURNER.getLastKeyPressed();
+    if (btKey != BluetoothPageTurner::KeyCode::NONE) {
+      lastActivityTime = millis();  // Reset inactivity timer
+
+      // Simuler les boutons correspondants
+      if (btKey == BluetoothPageTurner::KeyCode::PAGE_UP) {
+        // Envoyer événement BTN_UP à l'activité courante
+        // Note: Vous devrez peut-être ajouter une méthode dans InputManager
+        // pour injecter des événements synthétiques
+        Serial.printf("[%lu] [BT] Page Up pressed\n", millis());
+      } else if (btKey == BluetoothPageTurner::KeyCode::PAGE_DOWN) {
+        Serial.printf("[%lu] [BT] Page Down pressed\n", millis());
+      }
+    }
   }
 
   if (millis() - lastActivityTime >= AUTO_SLEEP_TIMEOUT_MS) {
