@@ -19,21 +19,24 @@ class HomeActivity final : public Activity {
   const std::function<void()> onReaderOpen;
   const std::function<void()> onSettingsOpen;
   const std::function<void()> onFileTransferOpen;
+  const std::function<void()> onBluetoothOpen;
 
   static void taskTrampoline(void* param);
   [[noreturn]] void displayTaskLoop();
   void render() const;
   int getMenuItemCount() const;
 
- public:
+public:
   explicit HomeActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                         const std::function<void()>& onContinueReading, const std::function<void()>& onReaderOpen,
-                        const std::function<void()>& onSettingsOpen, const std::function<void()>& onFileTransferOpen)
+                        const std::function<void()>& onSettingsOpen, const std::function<void()>& onFileTransferOpen,
+                        const std::function<void()>& onBluetoothOpen)
       : Activity("Home", renderer, mappedInput),
         onContinueReading(onContinueReading),
         onReaderOpen(onReaderOpen),
         onSettingsOpen(onSettingsOpen),
-        onFileTransferOpen(onFileTransferOpen) {}
+        onFileTransferOpen(onFileTransferOpen),
+        onBluetoothOpen(onBluetoothOpen) {}
   void onEnter() override;
   void onExit() override;
   void loop() override;

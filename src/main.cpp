@@ -238,7 +238,7 @@ void onGoToBluetooth() {
 void onGoHome() {
   exitActivity();
   enterNewActivity(new HomeActivity(renderer, mappedInputManager, onContinueReading, onGoToReaderHome, onGoToSettings,
-                                    onGoToFileTransfer, onGoToBluetooth));  // <-- Ajouter onGoToBluetooth
+                                    onGoToFileTransfer, onGoToBluetooth));
 }
 
 void setupDisplayAndFonts() {
